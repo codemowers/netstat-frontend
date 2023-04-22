@@ -1,7 +1,7 @@
 apiVersion: skaffold/v3
 kind: Config
 metadata:
-  name: netstat-ui
+  name: netstat-frontend
 
 deploy:
   kubectl: {}
@@ -12,4 +12,4 @@ manifests:
 
 build:
   artifacts:
-  - image: netstat-ui
+  - image: netstat-frontend

@@ -1,81 +1,38 @@
 ---
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  name: netstat-ui
-rules:
-- apiGroups: [""]
-  resources: ["pods"]
-  verbs: ["list"]
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  name: netstat-ui
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: netstat-ui
-subjects:
-- kind: ServiceAccount
-  name: netstat-ui
-  namespace: laurivosandi-jctkx
----
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: netstat-ui
----
-apiVersion: monitoring.coreos.com/v1
-kind: PodMonitor
-metadata:
-  name: netstat-ui
-spec:
-  selector:
-    matchLabels:
-      app: netstat-ui
-  podMetricsEndpoints:
-    - port: http
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: netstat-ui
+  name: netstat-frontend
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: netstat-ui
+      app: netstat-frontend
   template:
     metadata:
       labels:
-        app: netstat-ui
+        app: netstat-frontend
     spec:
-      serviceAccountName: netstat-ui
+      serviceAccountName: netstat-frontend
       enableServiceLinks: false
       imagePullSecrets:
         - name: regcred
       containers:
-        - name: netstat-ui
-          image: netstat-ui
+        - name: netstat-frontend
+          image: netstat-frontend
           ports:
             - containerPort: 3001
               name: http
-          env:
-            - name: POD_NAMESPACE
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.namespace
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: netstat-ui
+  name: netstat-frontend
   labels:
-    app: netstat-ui
+    app: netstat-frontend
 spec:
   selector:
-    app: netstat-ui
+    app: netstat-frontend
   ports:
   - protocol: TCP
     port: 3001
@@ -101,6 +58,6 @@ spec:
             path: /
             backend:
               service:
-                name: netstat-ui
+                name: netstat-frontend
                 port:
                   number: 3001
