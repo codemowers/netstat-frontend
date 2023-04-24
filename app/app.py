@@ -8,7 +8,7 @@ from ipaddress import IPv4Address, IPv4Network
 from sanic import Sanic
 from sanic.response import raw
 
-URL_AGGREGATE = os.environ.get("URL_AGGREGATE", "http://netstate-aggregator:3001")
+URL_AGGREGATE = os.environ.get("URL_AGGREGATE", "http://127.0.0.1:3002/aggregate.json")
 
 app = Sanic("netstat-frontend")
 
@@ -21,12 +21,12 @@ def humanize(j, filter_namespaces=(), collapse_hostnames=()):
             color = "#00ff7f"
         return "%s/%s" % (j["namespace"], j["owner"]["name"] if j.get("owner") else j["pod"]), color
     elif hostname:
-        for pattern in collapse_hostnames:
-            if fnmatch(hostname, pattern):
-                hostname = pattern
-                break
+        hostname = ".".join(hostname.split(".")[-2:])
+        org = j.get("whois", {}).get("org")
+        if org:
+            hostname = org
         color = "#ffff66"
-        return "%s" % (j["hostname"]), color
+        return "%s" % (hostname), color
     else:
         color = "#ff4040"
         return "%s" % (j["addr"]), color
@@ -76,4 +76,4 @@ async def render(request):
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=3001, single_process=True, motd=False)
+    app.run(host="0.0.0.0", port=3006, single_process=True, motd=False)
