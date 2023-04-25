@@ -37,6 +37,7 @@ async def render(request):
     async with aiohttp.ClientSession() as session:
         async with session.get(URL_AGGREGATE) as response:
             z = await response.json()
+    exclude_ports = [int(j) for j in request.args.getlist("exclude_ports", ())]
     collapse_hostnames = request.args.getlist("collapse_hostnames", ())
     exclude_namespaces = request.args.getlist("exclude", ("longhorn-system", "metallb-system", "prometheus-operator"))
     include_namespaces = request.args.getlist("include")
@@ -44,6 +45,8 @@ async def render(request):
     connections = Counter()
     for conn in z["connections"]:
         local, remote = conn["local"], conn["remote"]
+        if remote.get("port") in exclude_ports:
+            continue
         if IPv4Address(remote["addr"]) in IPv4Network("10.96.0.0/12"):
             continue
         if local.get("namespace") in exclude_namespaces or \
