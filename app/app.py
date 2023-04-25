@@ -13,7 +13,7 @@ URL_AGGREGATE = os.environ.get("URL_AGGREGATE", "http://127.0.0.1:3002/aggregate
 app = Sanic("netstat-frontend")
 
 
-def humanize(j, filter_namespaces=(), collapse_hostnames=()):
+def humanize(j, filter_namespaces=(), retain_hostnames=()):
     hostname = j.get("hostname")
     if j.get("pod"):
         color = "#2acaea"
@@ -21,10 +21,16 @@ def humanize(j, filter_namespaces=(), collapse_hostnames=()):
             color = "#00ff7f"
         return "%s/%s" % (j["namespace"], j["owner"]["name"] if j.get("owner") else j["pod"]), color
     elif hostname:
-        hostname = ".".join(hostname.split(".")[-2:])
-        org = j.get("whois", {}).get("org")
-        if org:
-            hostname = org
+        retain = False
+        for pattern in retain_hostnames:
+            if fnmatch(hostname, pattern):
+                retain = True
+                break
+        if not retain:
+            hostname = ".".join(hostname.split(".")[-2:])
+            org = j.get("whois", {}).get("org")
+            if org:
+                hostname = org
         color = "#ffff66"
         return "%s" % (hostname), color
     else:
@@ -38,7 +44,7 @@ async def render(request):
         async with session.get(URL_AGGREGATE) as response:
             z = await response.json()
     exclude_ports = [int(j) for j in request.args.getlist("exclude_ports", ())]
-    collapse_hostnames = request.args.getlist("collapse_hostnames", ())
+    retain_hostnames = request.args.getlist("retain_hostnames", ())
     exclude_namespaces = request.args.getlist("exclude", ("longhorn-system", "metallb-system", "prometheus-operator"))
     include_namespaces = request.args.getlist("include")
     dot = graphviz.Graph("topology", engine="sfdp")
@@ -57,8 +63,8 @@ async def render(request):
                 remote.get("namespace") in include_namespaces
             if not matches:
                 continue
-        hr, cr = humanize(remote, include_namespaces, collapse_hostnames)
-        hl, cl = humanize(local, include_namespaces, collapse_hostnames)
+        hr, cr = humanize(remote, include_namespaces, retain_hostnames)
+        hl, cl = humanize(local, include_namespaces, retain_hostnames)
 
         key = hl, hr
         if key[0] == key[1]:
